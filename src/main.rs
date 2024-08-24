@@ -17,6 +17,10 @@ const RED: &str = "\x1b[0;31m";
 const RESET: &str = "\x1b[0m";
 
 
+// Bar Constants
+const BAR_LENGTH: usize = 20;
+
+
 fn output_uptime() {
     let uptime = format_dhms(System::uptime());
     // Create a regular expression to match patterns like "1d", "16h", "5m", "3s"
@@ -41,6 +45,21 @@ fn system_info() -> String {
     let host_os = System::name().expect("No OS name found");
     let host_kernel = System::kernel_version().expect("No Kernal version found");
     return format!("OS: {YELLOW}{}{RESET} ({RED}{}{RESET})", host_os, host_kernel);
+}
+
+
+fn gen_bar(name: &str, used: u64, total: u64) -> String {
+    // Creating Bar String and Name
+    let mut result: String = String::new();
+    result.push_str(&format!("{}{}{} [", CYAN, name, RESET));
+
+    let percent: f64 = used as f64 / total as f64;
+    let num_bars: usize = (BAR_LENGTH as f64 * percent) as usize;
+    result.push_str(&"█".repeat(num_bars));
+    result.push_str(&"░".repeat(BAR_LENGTH - num_bars));
+    result.push_str("]");
+
+    return result;
 }
 
 
@@ -74,5 +93,6 @@ fn main() {
     let string_used: String = format!("{bytes_used:.2}");
     let string_total: String = format!("{bytes_total:.2}");
     // printing memory usages
-    println!("{} / {} [{:.2}%]", string_used, string_total, percent_used * 100.0);
+    print!("{}", gen_bar("memory", used_memory, total_memory));
+    println!("  {} / {} [{:.2}%]", string_used, string_total, percent_used * 100.0);
 }
