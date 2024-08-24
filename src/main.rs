@@ -44,32 +44,35 @@ fn system_info() -> String {
 }
 
 
-fn memory_info(self: sys) -> String {
-    return "".to_string();
-}
-
-
 fn main() {
-
+    // Original System Query
     let sys = System::new_all();
+    // User and Machine credentials
+    let user_name: String = whoami::realname();
+    let system_name: String = whoami::username();
 
-    println!("Welcome Back, {}{}{} ({}{}{})",
-        YELLOW, whoami::realname(), RESET, // Prints Name
-        CYAN, whoami::username(), RESET);  // Prints Username
+    print!("Welcome Back, {}{}{}", YELLOW, user_name, RESET); // Prints Name
+
+    if user_name == system_name {
+        println!("");
+    } else {
+        println!("({}{}{})", CYAN, whoami::username(), RESET);  // Prints Username
+    }
+
 
 
     output_uptime();
     println!("{}", system_info());
-    let total_memory: u64 = sys.total_memory();
+    // collecting memory sizes (used and total)
     let used_memory: u64 = sys.used_memory();
+    let total_memory: u64 = sys.total_memory();
     let percent_used: f64 = used_memory as f64/ total_memory as f64;
-
+    // use correct memory sizes
     let bytes_used = Byte::from_u64(used_memory).get_appropriate_unit(UnitType::Binary);
     let bytes_total = Byte::from_u64(total_memory).get_appropriate_unit(UnitType::Binary);
-
+    // formatting decimal places
     let string_used: String = format!("{bytes_used:.2}");
     let string_total: String = format!("{bytes_total:.2}");
-
-    println!("{}% memory used", used_memory);
+    // printing memory usages
     println!("{} / {} [{:.2}%]", string_used, string_total, percent_used * 100.0);
 }
