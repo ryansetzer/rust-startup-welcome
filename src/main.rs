@@ -2,8 +2,10 @@ use sysinfo::{
     Components, Disks, Networks, System,
 };
 
-use byte_unit::{Byte, Unit, UnitType};
+use byte_unit::{Byte, UnitType};
 
+
+use figlet_rs::FIGfont;
 
 use compound_duration::format_dhms;
 use regex::Regex;
@@ -18,7 +20,7 @@ const RESET: &str = "\x1b[0m";
 
 
 // Bar Constants
-const BAR_LENGTH: usize = 20;
+const BAR_LENGTH: usize = 35;
 
 
 fn output_uptime() {
@@ -34,7 +36,18 @@ fn output_uptime() {
     let hostname = sysinfo::System::host_name();
     // Matching for returned hostname
     match hostname {
-        Some(x) => println!("Uptime on {GREEN}{x}{RESET}: {result}"),
+        Some(x) => {
+            println!("Uptime on {GREEN}{x}{RESET}: {result}");
+
+            //let big_font = FIGfont::from_file("resources/big.flf").unwrap();
+            let small_font = FIGfont::from_file("resources/small.flf").unwrap();
+            //let big_font = FIGfont::standard().unwrap();
+            //let figure = big_font.convert("hello");
+            let figure = small_font.convert(&x);
+            assert!(figure.is_some());
+
+            println!("{}", figure.unwrap());
+        },
         None    => println!("Uptime: {result}"),
     }
 }

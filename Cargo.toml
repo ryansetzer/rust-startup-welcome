@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 byte-unit = "5.1.4"
 compound_duration = "1.2.1"
+figlet-rs = "0.1.5"
 regex = "1.10.5"
 sysinfo = "0.30.13"
 whoami = "1.5.1"
