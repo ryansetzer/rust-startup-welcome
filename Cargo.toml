@@ -1,0 +1,11 @@
+[package]
+name = "hapjacks-playground"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+byte-unit = "5.1.4"
+compound_duration = "1.2.1"
+regex = "1.10.5"
+sysinfo = "0.30.13"
+whoami = "1.5.1"
