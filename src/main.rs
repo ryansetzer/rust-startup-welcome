@@ -40,7 +40,7 @@ fn output_uptime() {
             println!("Uptime on {GREEN}{x}{RESET}: {result}");
 
             //let big_font = FIGfont::from_file("resources/big.flf").unwrap();
-            let small_font = FIGfont::from_file("resources/small.flf").unwrap();
+            let small_font = FIGfont::from_file("resources/Doom.flf").unwrap();
             //let big_font = FIGfont::standard().unwrap();
             //let figure = big_font.convert("hello");
             let figure = small_font.convert(&x);
