@@ -174,7 +174,22 @@ fn get_warning_color(percent: f64) -> String {
 }
 
 
-fn check_processes(sys: System) {
+fn check_systemd(process_name: &str, command: &str) -> bool {
+    return match
+    Command::new("systemctl")
+        .arg(command)
+        .arg(process_name)
+        .output()
+        .unwrap()
+        .status
+        .code() {
+        Some(0) => true,
+        _ => false
+    };
+}
+
+
+fn check_processes() {
     // Create a vector of string slices
     let programs: Vec<&str> = vec![
         "lightdm",
@@ -186,31 +201,19 @@ fn check_processes(sys: System) {
         "sonarr",
     ];
 
+    let mut is_active: bool;
+    let mut is_enabled: bool;
+    let mut active_color: &str;
+    let mut enabled_color: &str;
+
     // Print the vector
     for program in &programs {
-        let is_active: bool = match
-        Command::new("systemctl")
-            .arg("is-active")
-            .arg(program)
-            .output()
-            .unwrap()
-            .status
-            .code() {
-                Some(0) => true,
-                _ => false
-        };
-        let is_enabled: bool = match
-        Command::new("systemctl")
-            .arg("is-enabled")
-            .arg(program)
-            .output()
-            .unwrap()
-            .status
-            .code() {
-                Some(0) => true,
-                _ => false
-        };
-        println!("{} [{}] [{}]", program, is_active, is_enabled);
+        is_active = check_systemd(program, "is-active");
+        is_enabled = check_systemd(program, "is-enabled");
+        active_color = if is_active { GREEN } else { RED };
+        enabled_color = if is_enabled { GREEN } else { RED };
+        
+        println!("{:<15}\t[{}active{RESET}] [{}enabled{RESET}]", program, active_color, enabled_color);
     }
 }
 
@@ -222,7 +225,7 @@ fn main() {
     let sys = System::new_all();
     println!("{}", gen_memory(&sys));
     gen_disks();
-    check_processes(sys);
+    check_processes();
 
 
 }
