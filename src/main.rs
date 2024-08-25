@@ -138,11 +138,11 @@ fn gen_memory(sys: &System) -> String {
 
 fn gen_disks() {
     let free_storage: u64 = match disk_info() {
-        Ok(x) => x.free,
+        Ok(x) => x.free * 1000,
         Error       => 0
     };
     let total_storage: u64 = match disk_info() {
-        Ok(x) => x.total,
+        Ok(x) => x.total * 1000,
         Error       => 0
     };
 
