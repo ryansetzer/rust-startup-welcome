@@ -1,7 +1,8 @@
 use sysinfo::{
-    Components, Disks, Networks, System,
+    Components, Disks, Networks, System
 };
 
+use std::process::Command;
 
 use sys_info::disk_info;
 
@@ -165,7 +166,7 @@ fn gen_disks() {
 
 fn get_warning_color(percent: f64) -> String {
     let color: &str = match percent {
-        x if x > 0.80 => RED,
+        x if x > 0.90 => RED,
         x if x > 0.70 => YELLOW,
         _ => GREEN
     };
@@ -173,16 +174,55 @@ fn get_warning_color(percent: f64) -> String {
 }
 
 
+fn check_processes(sys: System) {
+    // Create a vector of string slices
+    let programs: Vec<&str> = vec![
+        "lightdm",
+        "firefox",
+        "jellyfin",
+        "plex",
+        "qbittorrent",
+        "radarr",
+        "sonarr",
+    ];
 
+    // Print the vector
+    for program in &programs {
+        let is_active: bool = match
+        Command::new("systemctl")
+            .arg("is-active")
+            .arg(program)
+            .output()
+            .unwrap()
+            .status
+            .code() {
+                Some(0) => true,
+                _ => false
+        };
+        let is_enabled: bool = match
+        Command::new("systemctl")
+            .arg("is-enabled")
+            .arg(program)
+            .output()
+            .unwrap()
+            .status
+            .code() {
+                Some(0) => true,
+                _ => false
+        };
+        println!("{} [{}] [{}]", program, is_active, is_enabled);
+    }
+}
 
 
 fn main() {
     println!("{}", gen_welcome());
 
     // Original System Query
-    let mut sys = System::new_all();
+    let sys = System::new_all();
     println!("{}", gen_memory(&sys));
     gen_disks();
+    check_processes(sys);
 
 
 }
