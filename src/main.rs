@@ -101,8 +101,14 @@ fn gen_bar(name: &str, used: u64, total: u64) -> String {
 
     let percent: f64 = used as f64 / total as f64;
     let num_bars: usize = (BAR_LENGTH as f64 * percent) as usize;
-    result.push_str(&"█".repeat(num_bars));
-    result.push_str(&"░".repeat(BAR_LENGTH - num_bars));
+    for n in 0..num_bars {
+        result.push_str(&format!("{}█{RESET}", get_warning_color(n as f64 / BAR_LENGTH as f64)));
+    }
+    for n in num_bars..BAR_LENGTH {
+        result.push_str(&format!("{}░{RESET}", get_warning_color(n as f64 / BAR_LENGTH as f64)));
+    }
+    
+    //result.push_str(&"░".repeat(BAR_LENGTH - num_bars));
     result.push_str("]");
 
     return result;
