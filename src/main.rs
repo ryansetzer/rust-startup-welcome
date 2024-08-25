@@ -119,7 +119,12 @@ fn gen_percent(used: u64, total: u64) -> String {
     let string_used: String = format!("{bytes_used:.2}");
     let string_total: String = format!("{bytes_total:.2}");
     // printing memory usages
-    result.push_str(&format!("  {} / {} [{:.2}%]", string_used, string_total, percent_used * 100.0));
+    result.push_str(&format!("  {} / {} [{}{:.2}%{}]",
+        string_used,
+        string_total,
+        get_warning_color(percent_used),
+        percent_used * 100.0,
+        RESET));
     return result;
 }
 
@@ -149,6 +154,16 @@ fn gen_disks() {
     let used_storage: u64 = total_storage - free_storage;
     print!("{}", gen_bar(&"storage", used_storage, total_storage));
     println!("{}", gen_percent(used_storage, total_storage));
+}
+
+
+fn get_warning_color(percent: f64) -> String {
+    let color: &str = match percent {
+        x if x > 0.80 => RED,
+        x if x > 0.70 => YELLOW,
+        _ => GREEN
+    };
+    return color.to_string();
 }
 
 
