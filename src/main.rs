@@ -2,6 +2,9 @@ use sysinfo::{
     Components, Disks, Networks, System,
 };
 
+
+use sys_info::disk_info;
+
 use byte_unit::{Byte, UnitType};
 
 
@@ -23,7 +26,16 @@ const RESET: &str = "\x1b[0m";
 const BAR_LENGTH: usize = 35;
 
 
-fn output_uptime() {
+
+fn gen_figlet(hostname: &str) -> String {
+    let doom_font = FIGfont::from_file("resources/Doom.flf").unwrap();
+    let figure = doom_font.convert(hostname);
+    assert!(figure.is_some());
+    return figure.unwrap().to_string();
+}
+
+
+fn gen_uptime() -> String {
     let uptime = format_dhms(System::uptime());
     // Create a regular expression to match patterns like "1d", "16h", "5m", "3s"
     let re = Regex::new(r"(\d+[dhms])").unwrap();
@@ -31,25 +43,46 @@ fn output_uptime() {
     let result = re.replace_all(&uptime, |caps: &regex::Captures| {
         format!(" {}", &caps[0])
     }).trim().to_string(); // Trim any extra spaces at the start and end
+    return result;
 
+}
+
+
+fn gen_names() -> String {
+    let mut result: String = String::new();
+    // User and Machine credentials
+    let user_name: String = whoami::realname();
+    let system_name: String = whoami::username();
+    // Adds name
+    result.push_str(&format!("Welcome Back, {}{}{}", YELLOW, &user_name, RESET));
+    // Add if there is unique name
+    if user_name == system_name {
+        result.push_str("");
+    } else {
+        result.push_str(&format!("({}{}{})", CYAN, &system_name, RESET));  // Prints Username
+    }
+    return result;
+}
+
+
+fn gen_welcome() -> String {
+    let mut result: String = String::new();
+    let uptime: String = gen_uptime();
     // Finding and printing hostname
     let hostname = sysinfo::System::host_name();
     // Matching for returned hostname
-    match hostname {
+    let formatted_uptime: String = match hostname {
+        // Hostname found
         Some(x) => {
-            println!("Uptime on {GREEN}{x}{RESET}: {result}");
-
-            //let big_font = FIGfont::from_file("resources/big.flf").unwrap();
-            let small_font = FIGfont::from_file("resources/Doom.flf").unwrap();
-            //let big_font = FIGfont::standard().unwrap();
-            //let figure = big_font.convert("hello");
-            let figure = small_font.convert(&x);
-            assert!(figure.is_some());
-
-            println!("{}", figure.unwrap());
-        },
-        None    => println!("Uptime: {result}"),
-    }
+            // Adds figlet of hostname to result String
+            result.push_str(&gen_figlet(&x));
+            format!("Uptime on {GREEN}{x}{RESET}: {uptime}")
+        } ,
+        // Hostname not found
+        None    => format!("Uptime: {uptime}") ,
+    };
+    result.push_str(&format!("{}\n{}\n{}", gen_names(), formatted_uptime, system_info()));
+    return result;
 }
 
 
@@ -64,7 +97,7 @@ fn system_info() -> String {
 fn gen_bar(name: &str, used: u64, total: u64) -> String {
     // Creating Bar String and Name
     let mut result: String = String::new();
-    result.push_str(&format!("{}{}{} [", CYAN, name, RESET));
+    result.push_str(&format!("{}{}{}\t[", CYAN, name, RESET));
 
     let percent: f64 = used as f64 / total as f64;
     let num_bars: usize = (BAR_LENGTH as f64 * percent) as usize;
@@ -76,36 +109,59 @@ fn gen_bar(name: &str, used: u64, total: u64) -> String {
 }
 
 
-fn main() {
-    // Original System Query
-    let sys = System::new_all();
-    // User and Machine credentials
-    let user_name: String = whoami::realname();
-    let system_name: String = whoami::username();
-
-    print!("Welcome Back, {}{}{}", YELLOW, user_name, RESET); // Prints Name
-
-    if user_name == system_name {
-        println!("");
-    } else {
-        println!("({}{}{})", CYAN, whoami::username(), RESET);  // Prints Username
-    }
-
-
-
-    output_uptime();
-    println!("{}", system_info());
-    // collecting memory sizes (used and total)
-    let used_memory: u64 = sys.used_memory();
-    let total_memory: u64 = sys.total_memory();
-    let percent_used: f64 = used_memory as f64/ total_memory as f64;
+fn gen_percent(used: u64, total: u64) -> String {
+    let mut result: String = String::new();
+    let percent_used: f64 = used as f64/ total as f64;
     // use correct memory sizes
-    let bytes_used = Byte::from_u64(used_memory).get_appropriate_unit(UnitType::Binary);
-    let bytes_total = Byte::from_u64(total_memory).get_appropriate_unit(UnitType::Binary);
+    let bytes_used = Byte::from_u64(used).get_appropriate_unit(UnitType::Binary);
+    let bytes_total = Byte::from_u64(total).get_appropriate_unit(UnitType::Binary);
     // formatting decimal places
     let string_used: String = format!("{bytes_used:.2}");
     let string_total: String = format!("{bytes_total:.2}");
     // printing memory usages
-    print!("{}", gen_bar("memory", used_memory, total_memory));
-    println!("  {} / {} [{:.2}%]", string_used, string_total, percent_used * 100.0);
+    result.push_str(&format!("  {} / {} [{:.2}%]", string_used, string_total, percent_used * 100.0));
+    return result;
+}
+
+
+fn gen_memory(sys: &System) -> String {
+    let mut result: String = String::new();
+    // collecting memory sizes (used and total)
+    let used_memory: u64 = sys.used_memory();
+    let total_memory: u64 = sys.total_memory();
+    result.push_str(&format!("{}{}",
+        &gen_bar("memory", used_memory, total_memory), // Bar of memory usage
+        &gen_percent(used_memory, total_memory)));     // Percentage of memory used
+    return result;
+}
+
+
+fn gen_disks() {
+    let free_storage: u64 = match disk_info() {
+        Ok(x) => x.free,
+        Error       => 0
+    };
+    let total_storage: u64 = match disk_info() {
+        Ok(x) => x.total,
+        Error       => 0
+    };
+
+    let used_storage: u64 = total_storage - free_storage;
+    print!("{}", gen_bar(&"storage", used_storage, total_storage));
+    println!("{}", gen_percent(used_storage, total_storage));
+}
+
+
+
+
+
+fn main() {
+    println!("{}", gen_welcome());
+
+    // Original System Query
+    let mut sys = System::new_all();
+    println!("{}", gen_memory(&sys));
+    gen_disks();
+
+
 }
