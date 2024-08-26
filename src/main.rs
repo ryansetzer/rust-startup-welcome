@@ -24,7 +24,7 @@ const RESET: &str = "\x1b[0m";
 
 
 // Bar Constants
-const BAR_LENGTH: usize = 35;
+const BAR_LENGTH: usize = 25;
 
 
 
@@ -98,19 +98,23 @@ fn system_info() -> String {
 fn gen_bar(name: &str, used: u64, total: u64) -> String {
     // Creating Bar String and Name
     let mut result: String = String::new();
-    result.push_str(&format!("{}{}{}\t", CYAN, name, RESET));
+    result.push_str(&format!("{}{}{}\t[", CYAN, name, RESET));
 
     let percent: f64 = used as f64 / total as f64;
     let num_bars: usize = (BAR_LENGTH as f64 * percent) as usize;
-    for n in 0..num_bars {
-        result.push_str(&format!("{}█{RESET}", get_warning_color(n as f64 / BAR_LENGTH as f64)));
-    }
-    for n in num_bars..BAR_LENGTH {
-        result.push_str(&format!("{}▒{RESET}", get_warning_color(n as f64 / BAR_LENGTH as f64)));
-    }
+
+    result.push_str(&"█".repeat(num_bars));
+    result.push_str(&" ".repeat(BAR_LENGTH - num_bars));
+
+    //for n in 0..num_bars {
+    //    result.push_str(&format!("{}█{RESET}", get_warning_color(n as f64 / BAR_LENGTH as f64)));
+    //}
+    //for n in num_bars..BAR_LENGTH {
+    //    result.push_str(&format!("{}▒{RESET}", get_warning_color(n as f64 / BAR_LENGTH as f64)));
+    //}
     
     //result.push_str(&"░".repeat(BAR_LENGTH - num_bars));
-    //result.push_str("]");
+    result.push_str("]");
 
     return result;
 }
