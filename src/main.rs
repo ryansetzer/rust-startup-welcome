@@ -4,6 +4,9 @@ use sysinfo::{
 
 use std::process::Command;
 
+
+use std::process;
+
 use sys_info::disk_info;
 
 use byte_unit::{Byte, UnitType};
@@ -193,7 +196,7 @@ fn check_systemd(process_name: &str, command: &str) -> bool {
 }
 
 
-fn check_processes() {
+fn check_processes(sys: System) {
     // Create a vector of string slices
     let programs: Vec<&str> = vec![
         "lightdm",
@@ -209,6 +212,7 @@ fn check_processes() {
     let mut is_enabled: bool;
     let mut active_color: &str;
     let mut enabled_color: &str;
+    let mut pid: u32;
 
     // Print the vector
     for program in &programs {
@@ -217,19 +221,28 @@ fn check_processes() {
         active_color = if is_active { GREEN } else { RED };
         enabled_color = if is_enabled { GREEN } else { RED };
         
-        println!("{:<15}\t[{}active{RESET}] [{}enabled{RESET}]", program, active_color, enabled_color);
+        print!("{:<15}\t[{}active{RESET}] [{}enabled{RESET}]", program, active_color, enabled_color);
+
+        if is_active {
+            for process in sys.processes_by_name(program) {
+                print!(" [{:<4}]", process.pid());
+            }
+        }
+        println!();
+
     }
 }
 
 
 fn main() {
     println!("{}", gen_welcome());
-
     // Original System Query
     let sys = System::new_all();
+    println!("{:>25}", "System:");
     println!("{}", gen_memory(&sys));
     gen_disks();
-    check_processes();
+    println!("{:>32}", "Applications:");
+    check_processes(sys);
 
 
 }
