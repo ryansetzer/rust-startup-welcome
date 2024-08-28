@@ -5,7 +5,7 @@ use sysinfo::{
 use std::process::Command;
 
 
-use std::process;
+use std::process::Output;
 
 use sys_info::disk_info;
 
@@ -20,7 +20,9 @@ use regex::Regex;
 
 // ANSI colored output codes
 const CYAN: &str = "\x1b[0;36m";
+const BLUE: &str = "\x1b[0;34m";
 const GREEN: &str = "\x1b[0;32m";
+const PURPLE: &str = "\x1b[0;35m";
 const YELLOW: &str = "\x1b[0;33m";
 const RED: &str = "\x1b[0;31m";
 const RESET: &str = "\x1b[0m";
@@ -101,7 +103,7 @@ fn system_info() -> String {
 fn gen_bar(name: &str, used: u64, total: u64) -> String {
     // Creating Bar String and Name
     let mut result: String = String::new();
-    result.push_str(&format!("{}{}{}\t[", CYAN, name, RESET));
+    result.push_str(&format!("{}{}{}\t[", BLUE, name, RESET));
 
     let percent: f64 = used as f64 / total as f64;
     let num_bars: usize = (BAR_LENGTH as f64 * percent) as usize;
@@ -158,11 +160,11 @@ fn gen_memory(sys: &System) -> String {
 fn gen_disks() {
     let free_storage: u64 = match disk_info() {
         Ok(x) => x.free * 1000,
-        Error       => 0
+        _     => 0
     };
     let total_storage: u64 = match disk_info() {
         Ok(x) => x.total * 1000,
-        Error       => 0
+        _     => 0
     };
 
     let used_storage: u64 = total_storage - free_storage;
@@ -199,20 +201,28 @@ fn check_systemd(process_name: &str, command: &str) -> bool {
 fn check_processes(sys: System) {
     // Create a vector of string slices
     let programs: Vec<&str> = vec![
-        "lightdm",
-        "firefox",
+        "minecraftd",
         "jellyfin",
-        "plex",
+        "docker",
+        "portainer",
         "qbittorrent",
+        "sshd",
+        "plex",
+        "firewalld",
         "radarr",
         "sonarr",
+        "readarr",
+        "jellyseerr",
+        "prowlarr",
+        "grafana",
+        "homepage",
     ];
-
     let mut is_active: bool;
     let mut is_enabled: bool;
     let mut active_color: &str;
     let mut enabled_color: &str;
-    let mut pid: u32;
+    let mut output;
+    let mut pid: String;
 
     // Print the vector
     for program in &programs {
@@ -224,9 +234,19 @@ fn check_processes(sys: System) {
         print!("{:<15}\t[{}active{RESET}] [{}enabled{RESET}]", program, active_color, enabled_color);
 
         if is_active {
-            for process in sys.processes_by_name(program) {
-                print!(" [{:<4}]", process.pid());
-            }
+            output = Command::new("systemctl")
+                .arg("show")
+                .arg("--property")
+                .arg("MainPID")
+                .arg("--value")
+                .arg(program)
+                .output()
+                .expect("Error finding PID");
+
+            pid = if output.status.success() {
+                String::from_utf8_lossy(&output.stdout).trim().to_string()
+            } else { String::from("----") };
+            print!(" [{:>4}]", pid);
         }
         println!();
 
@@ -238,10 +258,9 @@ fn main() {
     println!("{}", gen_welcome());
     // Original System Query
     let sys = System::new_all();
-    println!("{:>25}", "System:");
     println!("{}", gen_memory(&sys));
     gen_disks();
-    println!("{:>32}", "Applications:");
+    println!("{PURPLE}{:>32}{RESET}", "Applications:");
     check_processes(sys);
 
 
