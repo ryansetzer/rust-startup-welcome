@@ -2,6 +2,10 @@ use sysinfo::{
     Components, Disks, Networks, System
 };
 
+use std::time::Duration;
+use online::check;
+
+
 use std::process::Command;
 
 
@@ -254,7 +258,35 @@ fn check_processes(sys: System) {
 }
 
 
+fn gen_package_check() -> String {
+let mut result: String = String::from("Network Status: ");
+// Checks online status of machine
+match check(None).is_ok() {
+    true => result.push_str(&format!("{GREEN}Online{RESET}")) ,
+    // Returns early is no network connection
+    false => {result.push_str(&format!("{RED}Offline{RESET}")); return result}
+};
+    let output = Command::new("checkupdates")
+        .output()
+        .expect("Error finding packages");
+
+    if output.status.success() {
+        result.push_str("\nUpgradable Packages: ");
+        let num_packages: usize = String::from_utf8_lossy(&output.stdout)
+            .as_bytes()
+            .iter()
+            .filter(|&&c| c == b'\n')
+            .count();
+        result.push_str(&format!("{YELLOW}{}{RESET}", num_packages));
+    } else {
+        result.push_str("\n{RED}Error{RESET} finding packages");
+    }
+    return result;
+}
+
+
 fn main() {
+    let packages: String = gen_package_check();
     println!("{}", gen_welcome());
     // Original System Query
     let sys = System::new_all();
@@ -262,6 +294,8 @@ fn main() {
     gen_disks();
     println!("{PURPLE}{:>32}{RESET}", "Applications:");
     check_processes(sys);
+    println!("{PURPLE}{:>32}{RESET}", "Connections:");
+    println!("{}", packages);
 
 
 }
