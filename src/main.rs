@@ -47,6 +47,7 @@ fn gen_figlet(hostname: &str) -> String {
     let mut fig_text: String = "\t".to_owned() + &figure.unwrap().to_string();
     // Adding tabs to begining of each following lines
     fig_text = str::replace(&fig_text, "\n", "\n\t");
+    // Removed extra tab
     fig_text.pop();
     return fig_text;
 }
@@ -201,7 +202,8 @@ fn check_systemd(process_name: &str, command: &str) -> bool {
 }
 
 
-fn check_processes(sys: System) {
+fn check_processes() -> String {
+    let mut result: String = String::new();
     // Create a vector of string slices
     let programs: Vec<&str> = vec![
         "minecraftd",
@@ -234,7 +236,7 @@ fn check_processes(sys: System) {
         active_color = if is_active { GREEN } else { RED };
         enabled_color = if is_enabled { GREEN } else { RED };
         
-        print!("{:<15}\t[{}active{RESET}] [{}enabled{RESET}]", program, active_color, enabled_color);
+        result.push_str(&format!("{:<15}\t[{}active{RESET}] [{}enabled{RESET}]", program, active_color, enabled_color));
 
         if is_active {
             output = Command::new("systemctl")
@@ -246,25 +248,24 @@ fn check_processes(sys: System) {
                 .output()
                 .expect("Error finding PID");
 
-            pid = if output.status.success() {
-                String::from_utf8_lossy(&output.stdout).trim().to_string()
-            } else { String::from("----") };
-            print!(" [{:>4}]", pid);
+            pid = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        } else {
+            pid = String::from(".".repeat(5));
         }
-        println!();
-
+        result.push_str(&format!(" [{:>5}]\n", pid));
     }
+    return result;
 }
 
 
 fn gen_package_check() -> String {
-let mut result: String = String::from("Network Status: ");
-// Checks online status of machine
-match check(None).is_ok() {
-    true => result.push_str(&format!("{GREEN}Online{RESET}")) ,
-    // Returns early is no network connection
-    false => {result.push_str(&format!("{RED}Offline{RESET}")); return result}
-};
+    let mut result: String = String::from("Network Status: ");
+    // Checks online status of machine
+    match check(None).is_ok() {
+        true => result.push_str(&format!("{GREEN}Online{RESET}")) ,
+        // Returns early is no network connection
+        false => {result.push_str(&format!("{RED}Offline{RESET}")); return result}
+    };
     let output = Command::new("checkupdates")
         .output()
         .expect("Error finding packages");
@@ -292,7 +293,7 @@ fn main() {
     println!("{}", gen_memory(&sys));
     gen_disks();
     println!("{PURPLE}{:>32}{RESET}", "Applications:");
-    check_processes(sys);
+    println!("{}", check_processes());
     println!("{PURPLE}{:>32}{RESET}", "Connections:");
     println!("{}", packages);
 
