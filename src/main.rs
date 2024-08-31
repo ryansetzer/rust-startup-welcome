@@ -161,7 +161,8 @@ fn gen_memory(sys: &System) -> String {
 }
 
 
-fn gen_disks() {
+fn gen_disks() -> String {
+    let mut result: String = String::new();
     let free_storage: u64 = match disk_info() {
         Ok(x) => x.free * 1000,
         _     => 0
@@ -172,8 +173,9 @@ fn gen_disks() {
     };
 
     let used_storage: u64 = total_storage - free_storage;
-    print!("{}", gen_bar(&"storage", used_storage, total_storage));
-    println!("{}", gen_percent(used_storage, total_storage));
+    result.push_str(&format!("{}{}", gen_bar(&"storage", used_storage, total_storage),
+                                     gen_percent(used_storage, total_storage)));
+    return result;
 }
 
 
@@ -250,10 +252,11 @@ fn check_processes() -> String {
 
             pid = String::from_utf8_lossy(&output.stdout).trim().to_string();
         } else {
-            pid = String::from(".".repeat(5));
+            pid = String::from("-".repeat(5));
         }
         result.push_str(&format!(" [{:>5}]\n", pid));
     }
+    result.pop();
     return result;
 }
 
@@ -286,12 +289,11 @@ fn gen_package_check() -> String {
 
 
 fn main() {
+    let sys = System::new_all();
     let packages: String = gen_package_check();
     println!("{}", gen_welcome());
-    // Original System Query
-    let sys = System::new_all();
     println!("{}", gen_memory(&sys));
-    gen_disks();
+    println!("{}", gen_disks());
     println!("{PURPLE}{:>32}{RESET}", "Applications:");
     println!("{}", check_processes());
     println!("{PURPLE}{:>32}{RESET}", "Connections:");
