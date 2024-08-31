@@ -44,9 +44,11 @@ fn gen_figlet(hostname: &str) -> String {
     let figure = doom_font.convert(hostname);
     assert!(figure.is_some());
     // Adding tab to begining of figlet
-    let fig_text: String = "\t".to_owned() + &figure.unwrap().to_string();
+    let mut fig_text: String = "\t".to_owned() + &figure.unwrap().to_string();
     // Adding tabs to begining of each following lines
-    return str::replace(&fig_text, "\n", "\n\t");
+    fig_text = str::replace(&fig_text, "\n", "\n\t");
+    fig_text.pop();
+    return fig_text;
 }
 
 
