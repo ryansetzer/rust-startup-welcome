@@ -38,10 +38,15 @@ const BAR_LENGTH: usize = 25;
 
 
 fn gen_figlet(hostname: &str) -> String {
-    let doom_font = FIGfont::from_file("resources/Doom.flf").unwrap();
+    // Using non-standard font
+    let doom_font = FIGfont::from_file("resources/Doom.flf").expect("Could not find font file");
+    // Generating figlet from hostname
     let figure = doom_font.convert(hostname);
     assert!(figure.is_some());
-    return figure.unwrap().to_string();
+    // Adding tab to begining of figlet
+    let fig_text: String = "\t".to_owned() + &figure.unwrap().to_string();
+    // Adding tabs to begining of each following lines
+    return str::replace(&fig_text, "\n", "\n\t");
 }
 
 
@@ -115,14 +120,6 @@ fn gen_bar(name: &str, used: u64, total: u64) -> String {
     result.push_str(&"█".repeat(num_bars));
     result.push_str(&" ".repeat(BAR_LENGTH - num_bars));
 
-    //for n in 0..num_bars {
-    //    result.push_str(&format!("{}█{RESET}", get_warning_color(n as f64 / BAR_LENGTH as f64)));
-    //}
-    //for n in num_bars..BAR_LENGTH {
-    //    result.push_str(&format!("{}▒{RESET}", get_warning_color(n as f64 / BAR_LENGTH as f64)));
-    //}
-    
-    //result.push_str(&"░".repeat(BAR_LENGTH - num_bars));
     result.push_str("]");
 
     return result;
