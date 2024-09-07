@@ -13,6 +13,9 @@ use std::process::Output;
 
 use sys_info::disk_info;
 
+
+use tokio::task;
+
 use byte_unit::{Byte, UnitType};
 
 
@@ -268,7 +271,7 @@ fn check_processes() -> String {
 }
 
 
-fn gen_package_check() -> String {
+async fn gen_package_check() -> String {
     let mut result: String = String::from("Network Status: ");
     // Checks online status of machine
     match check(None).is_ok() {
@@ -276,6 +279,7 @@ fn gen_package_check() -> String {
         // Returns early is no network connection
         false => {result.push_str(&format!("{RED}Offline{RESET}")); return result}
     };
+    // Checks updates via checkupdates (arch) command
     let output = Command::new("checkupdates")
         .output()
         .expect("Error finding packages");
@@ -285,7 +289,7 @@ fn gen_package_check() -> String {
         let num_packages: usize = String::from_utf8_lossy(&output.stdout)
             .as_bytes()
             .iter()
-            .filter(|&&c| c == b'\n')
+            .filter(|&&c| c == b'\n') // Makes entry based on new lines
             .count();
         result.push_str(&format!("{YELLOW}{}{RESET}", num_packages));
     } else {
@@ -294,17 +298,18 @@ fn gen_package_check() -> String {
     return result;
 }
 
+#[tokio::main]
+async fn main() {
+    // Creates lazy async spawn for gen_package_check to run while program executes
+    let handle = tokio::spawn(async move {gen_package_check().await});
 
-fn main() {
     let sys = System::new_all();
-    let packages: String = gen_package_check();
     println!("{}", gen_welcome());
     println!("{}", gen_memory(&sys));
     println!("{}", gen_disks());
     println!("{PURPLE}{:>32}{RESET}", "Applications:");
     println!("{}", check_processes());
     println!("{PURPLE}{:>32}{RESET}", "Connections:");
-    println!("{}", packages);
-
-
+    // Waits for async call to gen_package_list to finish, then prints
+    println!("{}", handle.await.unwrap());
 }
