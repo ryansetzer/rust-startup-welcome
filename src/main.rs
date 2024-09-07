@@ -7,7 +7,7 @@ use online::check;
 
 
 use std::process::Command;
-
+use std::collections::HashMap;
 
 use std::process::Output;
 
@@ -17,6 +17,7 @@ use byte_unit::{Byte, UnitType};
 
 
 use figlet_rs::FIGfont;
+use std::fs;
 
 use compound_duration::format_dhms;
 use regex::Regex;
@@ -203,53 +204,59 @@ fn check_systemd(process_name: &str, command: &str) -> bool {
     };
 }
 
+fn parse_processes() -> HashMap<String, String> {
+    let mut result: HashMap<String, String> = HashMap::new();
+    // Fetches the processes listed in file
+    let processes: String = fs::read_to_string("resources/processes.txt").expect("could not read processes file");
+    // Inserts each process listed into result
+    for process in processes.trim().split("\n") {
+        // Splits on alias denominator
+        let split: Vec<&str> = process.split(":").collect::<Vec<&str>>();
+        if split.len() > 1 { // Has found alias
+           result.insert(split[0].to_string(), split[1].to_string()); 
+        } else { // Has no found alias
+            result.insert(process.to_string(), process.to_string());
+        }
+    }
+    return result;
+}
+
+
+
 
 fn check_processes() -> String {
+    let programs: HashMap<String, String> = parse_processes();
     let mut result: String = String::new();
-    // Create a vector of string slices
-    let programs: Vec<&str> = vec![
-        "minecraftd",
-        "jellyfin",
-        "docker",
-        "portainer",
-        "qbittorrent",
-        "sshd",
-        "plex",
-        "firewalld",
-        "radarr",
-        "sonarr",
-        "readarr",
-        "jellyseerr",
-        "prowlarr",
-        "grafana",
-        "homepage",
-    ];
-    let mut is_active: bool;
-    let mut is_enabled: bool;
-    let mut active_color: &str;
-    let mut enabled_color: &str;
-    let mut output;
+    // Tuple of active and enabled variables
+    let (mut is_active, mut is_enabled): (bool, bool);
+    // Tuple of active and enabled color variables
+    let (mut active_color, mut enabled_color): (&str, &str);
+    // Stores output of systemctl command
+    let mut output: Output;
+    // Used to store pid of current process
     let mut pid: String;
 
-    // Print the vector
-    for program in &programs {
-        is_active = check_systemd(program, "is-active");
-        is_enabled = check_systemd(program, "is-enabled");
+    // Checking status of each process listed
+    for program in programs {
+        // Checking status of process and setting correct color
+        is_active = check_systemd(&program.0, "is-active");
+        is_enabled = check_systemd(&program.0, "is-enabled");
         active_color = if is_active { GREEN } else { RED };
         enabled_color = if is_enabled { GREEN } else { RED };
         
-        result.push_str(&format!("{:<15}\t[{}active{RESET}] [{}enabled{RESET}]", program, active_color, enabled_color));
+        // Generates line of colored active and enabled program
+        result.push_str(&format!("{:<15}\t[{}active{RESET}] [{}enabled{RESET}]", &program.1, active_color, enabled_color));
 
         if is_active {
+            // Obtains PID of program running on system
             output = Command::new("systemctl")
                 .arg("show")
                 .arg("--property")
                 .arg("MainPID")
                 .arg("--value")
-                .arg(program)
+                .arg(program.0)
                 .output()
                 .expect("Error finding PID");
-
             pid = String::from_utf8_lossy(&output.stdout).trim().to_string();
         } else {
             pid = String::from("-".repeat(5));
@@ -282,7 +289,7 @@ fn gen_package_check() -> String {
             .count();
         result.push_str(&format!("{YELLOW}{}{RESET}", num_packages));
     } else {
-        result.push_str("\n{RED}Error{RESET} finding packages");
+        result.push_str("\nNo packages found");
     }
     return result;
 }

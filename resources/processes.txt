@@ -1,0 +1,10 @@
+docker
+sshd
+minecraftd:minecraft
+jellyfin
+plex-media-server:plex
+radarr
+sonarr
+readarr
+firewalld
+lightdm
