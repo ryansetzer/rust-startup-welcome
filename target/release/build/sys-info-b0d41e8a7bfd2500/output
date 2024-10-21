@@ -1,4 +1,4 @@
-OUT_DIR = Some(/home/rsetzah/Workspaces/rust-projects/hapjacks-playground/target/release/build/sys-info-b0d41e8a7bfd2500/out)
+OUT_DIR = Some(/home/rsetzah/Workspaces/rust-projects/rust-startup-welcome/target/release/build/sys-info-b0d41e8a7bfd2500/out)
 TARGET = Some(x86_64-unknown-linux-gnu)
 OPT_LEVEL = Some(3)
 HOST = Some(x86_64-unknown-linux-gnu)
@@ -41,4 +41,4 @@ HOST_ARFLAGS = None
 cargo:rerun-if-env-changed=ARFLAGS
 ARFLAGS = None
 cargo:rustc-link-lib=static=info
-cargo:rustc-link-search=native=/home/rsetzah/Workspaces/rust-projects/hapjacks-playground/target/release/build/sys-info-b0d41e8a7bfd2500/out
+cargo:rustc-link-search=native=/home/rsetzah/Workspaces/rust-projects/rust-startup-welcome/target/release/build/sys-info-b0d41e8a7bfd2500/out

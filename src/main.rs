@@ -1,8 +1,5 @@
-use sysinfo::{
-    Components, Disks, Networks, System
-};
+use sysinfo::System;
 
-use std::time::Duration;
 use online::check;
 
 
@@ -12,9 +9,6 @@ use std::collections::HashMap;
 use std::process::Output;
 
 use sys_info::disk_info;
-
-
-use tokio::task;
 
 use byte_unit::{Byte, UnitType};
 
@@ -116,21 +110,60 @@ fn system_info() -> String {
 }
 
 
+fn gradient_color(percentage: f32) -> String {
+    if percentage < 50.0 {
+        // Green to Yellow
+        let red = (percentage / 50.0 * 255.0) as u8;  // Increases red as percentage increases
+        let green = 255;  // Full green
+        format!("\x1b[38;2;{};{};0m", red, green)  // RGB format
+    } else {
+        // Yellow to Red
+        let red = 255;  // Full red
+        let green = (255.0 - ((percentage - 50.0) / 50.0 * 255.0)) as u8;  // Decreases green to 0
+        format!("\x1b[38;2;{};{};0m", red, green)  // RGB format
+    }
+}
+
 fn gen_bar(name: &str, used: u64, total: u64) -> String {
     // Creating Bar String and Name
     let mut result: String = String::new();
     result.push_str(&format!("{}{}{}\t[", BLUE, name, RESET));
 
-    let percent: f64 = used as f64 / total as f64;
-    let num_bars: usize = (BAR_LENGTH as f64 * percent) as usize;
+    let percent: f64 = used as f64 / total as f64 * 100.0; // Calculate percentage
+    let num_bars: usize = (BAR_LENGTH as f64 * (percent / 100.0)) as usize;
 
-    result.push_str(&"█".repeat(num_bars));
-    result.push_str(&" ".repeat(BAR_LENGTH - num_bars));
+    // Generate the colored bar segments
+    for i in 0..BAR_LENGTH {
+        if i < num_bars {
+            let segment_percentage = (i as f32 / BAR_LENGTH as f32) * 100.0;
+            result.push_str(&gradient_color(segment_percentage)); // Add the color
+            result.push('█'); // Add the filled block
+        } else {
+            result.push(' '); // Add space for the empty part
+        }
+    }
 
+    result.push_str(RESET); // Reset color after the bar
     result.push_str("]");
 
-    return result;
+    result
 }
+
+//fn gen_bar(name: &str, used: u64, total: u64) -> String {
+//    // Creating Bar String and Name
+//    let mut result: String = String::new();
+//    result.push_str(&format!("{}{}{}\t[", BLUE, name, RESET));
+//
+//    let percent: f64 = used as f64 / total as f64;
+//    let num_bars: usize = (BAR_LENGTH as f64 * percent) as usize;
+//
+//    result.push_str(&"█".repeat(num_bars));
+//    result.push_str(&" ".repeat(BAR_LENGTH - num_bars));
+//
+//    result.push_str("]");
+//
+//    return result;
+//}
 
 
 fn gen_percent(used: u64, total: u64) -> String {

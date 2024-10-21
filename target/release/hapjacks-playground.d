@@ -1,1 +1,1 @@
-/home/rsetzah/Workspaces/rust-projects/hapjacks-playground/target/release/hapjacks-playground: /home/rsetzah/Workspaces/rust-projects/hapjacks-playground/src/main.rs
+/home/rsetzah/Workspaces/rust-projects/rust-startup-welcome/target/release/hapjacks-playground: /home/rsetzah/Workspaces/rust-projects/rust-startup-welcome/src/main.rs
