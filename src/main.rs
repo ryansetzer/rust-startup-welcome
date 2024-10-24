@@ -135,8 +135,6 @@ fn gen_bar(name: &str, used: u64, total: u64) -> String {
     // Generate the colored bar segments
     for i in 0..BAR_LENGTH {
         if i < num_bars {
-            let segment_percentage = (i as f32 / BAR_LENGTH as f32) * 100.0;
-            //result.push_str(&gradient_color(segment_percentage)); // Add the color
             result.push('█'); // Add the filled block
         } else {
             result.push(' '); // Add space for the empty part
@@ -179,7 +177,7 @@ fn gen_percent(used: u64, total: u64) -> String {
     result.push_str(&format!("  {} / {} [{}{:.2}%{}]",
         string_used,
         string_total,
-        gradient_color(percent_used),
+        gradient_color(percent_used * 100.0),
         percent_used * 100.0,
         RESET));
     return result;
