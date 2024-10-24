@@ -110,7 +110,7 @@ fn system_info() -> String {
 }
 
 
-fn gradient_color(percentage: f32) -> String {
+fn gradient_color(percentage: f64) -> String {
     if percentage < 50.0 {
         // Green to Yellow
         let red = (percentage / 50.0 * 255.0) as u8;  // Increases red as percentage increases
@@ -136,7 +136,7 @@ fn gen_bar(name: &str, used: u64, total: u64) -> String {
     for i in 0..BAR_LENGTH {
         if i < num_bars {
             let segment_percentage = (i as f32 / BAR_LENGTH as f32) * 100.0;
-            result.push_str(&gradient_color(segment_percentage)); // Add the color
+            //result.push_str(&gradient_color(segment_percentage)); // Add the color
             result.push('█'); // Add the filled block
         } else {
             result.push(' '); // Add space for the empty part
@@ -179,7 +179,7 @@ fn gen_percent(used: u64, total: u64) -> String {
     result.push_str(&format!("  {} / {} [{}{:.2}%{}]",
         string_used,
         string_total,
-        get_warning_color(percent_used),
+        gradient_color(percent_used),
         percent_used * 100.0,
         RESET));
     return result;
