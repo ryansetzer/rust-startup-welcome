@@ -1,7 +1,11 @@
 use sysinfo::System;
 
-use online::check;
+use std::cmp;
 
+//extern crate cpuid;
+use raw_cpuid::CpuId;
+
+use online::check;
 
 use std::process::Command;
 use std::collections::HashMap;
@@ -11,7 +15,6 @@ use std::process::Output;
 use sys_info::disk_info;
 
 use byte_unit::{Byte, UnitType};
-
 
 use figlet_rs::FIGfont;
 use std::fs;
@@ -29,10 +32,9 @@ const YELLOW: &str = "\x1b[0;33m";
 const RED: &str = "\x1b[0;31m";
 const RESET: &str = "\x1b[0m";
 
-
 // Bar Constants
 const BAR_LENGTH: usize = 25;
-
+const MAX_CPU_FREQ: f64 = 5.0;
 
 
 fn gen_figlet(hostname: &str) -> String {
@@ -60,7 +62,6 @@ fn gen_uptime() -> String {
         format!(" {}", &caps[0])
     }).trim().to_string(); // Trim any extra spaces at the start and end
     return result;
-
 }
 
 
@@ -147,39 +148,96 @@ fn gen_bar(name: &str, used: u64, total: u64) -> String {
     result
 }
 
-//fn gen_bar(name: &str, used: u64, total: u64) -> String {
-//    // Creating Bar String and Name
-//    let mut result: String = String::new();
-//    result.push_str(&format!("{}{}{}\t[", BLUE, name, RESET));
-//
-//    let percent: f64 = used as f64 / total as f64;
-//    let num_bars: usize = (BAR_LENGTH as f64 * percent) as usize;
-//
-//    result.push_str(&"█".repeat(num_bars));
-//    result.push_str(&" ".repeat(BAR_LENGTH - num_bars));
-//
-//    result.push_str("]");
-//
-//    return result;
-//}
+
+fn gen_multi_bar(header: &str, current_1: f64, total_1: f64, current_2: f64, total_2: f64) -> String {
+    let mut result: String = String::new();
+
+    // calculate number of bars of each measure
+    let num_bars_1: usize = (current_1 / total_1 * BAR_LENGTH as f64) as usize;
+    let num_bars_2: usize = (current_2 / total_2 * BAR_LENGTH as f64) as usize;
+    // sorting bar sizes
+    let smaller_bar_num: usize = cmp::min(num_bars_1, num_bars_2);
+    let bigger_bar_num: usize = cmp::max(num_bars_1, num_bars_2);
+
+    result.push_str(&format!("{BLUE}{}{RESET}\t[", header));
+    // smaller bar (overlap)
+    for _ in 0..smaller_bar_num {
+        result.push_str("█");
+    }
+    // larger bar
+    for _ in 0..(bigger_bar_num - smaller_bar_num) {
+        result.push_str("▒");
+    }
+    // remaining
+    for _ in 0..(BAR_LENGTH - bigger_bar_num) {
+        result.push_str(" ");
+    }
+    result.push_str("]");
+
+    return result;
+}
 
 
-fn gen_percent(used: u64, total: u64) -> String {
+fn gen_percent(used: u64, total: u64, using_bytes: bool) -> String {
     let mut result: String = String::new();
     let percent_used: f64 = used as f64/ total as f64;
-    // use correct memory sizes
-    let bytes_used = Byte::from_u64(used).get_appropriate_unit(UnitType::Binary);
-    let bytes_total = Byte::from_u64(total).get_appropriate_unit(UnitType::Binary);
-    // formatting decimal places
-    let string_used: String = format!("{bytes_used:.2}");
-    let string_total: String = format!("{bytes_total:.2}");
-    // printing memory usages
-    result.push_str(&format!("  {} / {} [{}{:.2}%{}]",
-        string_used,
-        string_total,
+
+    // used if raw bytes should be printed
+    if using_bytes {
+        // use correct memory sizes
+        let bytes_used = Byte::from_u64(used).get_appropriate_unit(UnitType::Binary);
+        let bytes_total = Byte::from_u64(total).get_appropriate_unit(UnitType::Binary);
+        // formatting decimal places
+        let string_used: String = format!("{bytes_used:.2}");
+        let string_total: String = format!("{bytes_total:.2}");
+        // printing memory usages
+        result.push_str(&format!("  {} / {}",
+            string_used,
+            string_total));
+    }
+
+    // final percentage
+    result.push_str(&format!(" [{}{:.2}%{}]",
         gradient_color(percent_used * 100.0),
         percent_used * 100.0,
         RESET));
+    return result;
+}
+
+
+fn gen_cpu(sys: &System) -> String {
+    let mut result: String = String::new();
+
+    let cpuid = CpuId::new();
+    
+    println!("{}", cpuid
+        .get_processor_brand_string()
+        .as_ref()
+        .map_or_else(|| "n/a", |pbs| pbs.as_str())
+    );
+
+
+    let mut cpu_usage_sum: f32 = 0.0;
+    let mut cpu_freq_sum: u64 = 0;
+    let mut thread_count: usize = 0;
+
+    for cpu in sys.cpus() {
+        cpu_usage_sum += cpu.cpu_usage();
+        cpu_freq_sum += cpu.frequency();
+        thread_count += 1;
+    }
+
+    const MHZ_TO_GHZ: usize = 1000;
+    let average_cpu_freq: f64 = cpu_freq_sum as f64 /
+                                thread_count as f64 /
+                                MHZ_TO_GHZ as f64;
+
+    let average_usage: f64 = cpu_usage_sum as f64 / thread_count as f64;
+
+    print!("{}", gen_multi_bar("cpu", average_usage, 100.0, average_cpu_freq, MAX_CPU_FREQ));
+    print!("  util:{}", gen_percent((average_usage * 1000.0) as u64, (100.0 * 1000.0) as u64, false));
+    println!(" freq: {:.2} Ghz{}", average_cpu_freq, gen_percent((average_cpu_freq * 1000.0) as u64, (MAX_CPU_FREQ * 1000.0) as u64, false));
+
     return result;
 }
 
@@ -191,7 +249,7 @@ fn gen_memory(sys: &System) -> String {
     let total_memory: u64 = sys.total_memory();
     result.push_str(&format!("{}{}",
         &gen_bar("memory", used_memory, total_memory), // Bar of memory usage
-        &gen_percent(used_memory, total_memory)));     // Percentage of memory used
+        &gen_percent(used_memory, total_memory, true)));     // Percentage of memory used
     return result;
 }
 
@@ -209,18 +267,8 @@ fn gen_disks() -> String {
 
     let used_storage: u64 = total_storage - free_storage;
     result.push_str(&format!("{}{}", gen_bar(&"storage", used_storage, total_storage),
-                                     gen_percent(used_storage, total_storage)));
+                                     gen_percent(used_storage, total_storage, true)));
     return result;
-}
-
-
-fn get_warning_color(percent: f64) -> String {
-    let color: &str = match percent {
-        x if x > 0.90 => RED,
-        x if x > 0.70 => YELLOW,
-        _ => GREEN
-    };
-    return color.to_string();
 }
 
 
@@ -334,8 +382,11 @@ async fn main() {
     // Creates lazy async spawn for gen_package_check to run while program executes
     let handle = tokio::spawn(async move {gen_package_check().await});
 
-    let sys = System::new_all();
+    let mut sys = System::new_all();
     println!("{}", gen_welcome());
+
+    sys.refresh_all();
+    gen_cpu(&sys);
     println!("{}", gen_memory(&sys));
     println!("{}", gen_disks());
     println!("{PURPLE}{:>32}{RESET}", "Applications:");
