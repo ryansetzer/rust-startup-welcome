@@ -304,6 +304,16 @@ fn parse_processes() -> HashMap<String, String> {
 }
 
 
+fn has_systemd() -> bool {
+    return match Command::new("systemctl")
+        .arg("--version")
+        .output() {
+       Ok(_) => true,
+       Err(_) => false,
+    };
+}
+
+
 
 
 fn check_processes() -> String {
@@ -389,8 +399,12 @@ async fn main() {
     gen_cpu(&sys);
     println!("{}", gen_memory(&sys));
     println!("{}", gen_disks());
-    println!("{PURPLE}{:>32}{RESET}", "Applications:");
-    println!("{}", check_processes());
+
+    if has_systemd() {
+        println!("{PURPLE}{:>32}{RESET}", "Applications:");
+        println!("{}", check_processes());
+    }
+
     println!("{PURPLE}{:>32}{RESET}", "Connections:");
     // Waits for async call to gen_package_list to finish, then prints
     println!("{}", handle.await.unwrap());
