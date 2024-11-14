@@ -304,9 +304,9 @@ fn parse_processes() -> HashMap<String, String> {
 }
 
 
-fn has_systemd() -> bool {
-    return match Command::new("systemctl")
-        .arg("--version")
+fn has_program(program_name: &str) -> bool {
+    return match Command::new(program_name)
+        //.arg("--version")
         .output() {
        Ok(_) => true,
        Err(_) => false,
@@ -361,6 +361,7 @@ fn check_processes() -> String {
 
 
 async fn gen_package_check() -> String {
+
     let mut result: String = String::from("Network Status: ");
     // Checks online status of machine
     match check(None).is_ok() {
@@ -368,21 +369,23 @@ async fn gen_package_check() -> String {
         // Returns early is no network connection
         false => {result.push_str(&format!("{RED}Offline{RESET}")); return result}
     };
-    // Checks updates via checkupdates (arch) command
-    let output = Command::new("checkupdates")
-        .output()
-        .expect("Error finding packages");
+    if has_program("checkupdates") {
+        // Checks updates via checkupdates (arch) command
+        let output = Command::new("checkupdates")
+            .output()
+            .expect("Error finding packages");
 
-    if output.status.success() {
         result.push_str("\nUpgradable Packages: ");
-        let num_packages: usize = String::from_utf8_lossy(&output.stdout)
-            .as_bytes()
-            .iter()
-            .filter(|&&c| c == b'\n') // Makes entry based on new lines
-            .count();
-        result.push_str(&format!("{YELLOW}{}{RESET}", num_packages));
-    } else {
-        result.push_str("\nNo packages found");
+        if output.status.success() {
+            let num_packages: usize = String::from_utf8_lossy(&output.stdout)
+                .as_bytes()
+                .iter()
+                .filter(|&&c| c == b'\n') // Makes entry based on new lines
+                .count();
+            result.push_str(&format!("{YELLOW}{}{RESET}", num_packages));
+        } else {
+            result.push_str(&format!("{YELLOW}Up to Date{RESET}"));
+        }
     }
     return result;
 }
@@ -400,7 +403,7 @@ async fn main() {
     println!("{}", gen_memory(&sys));
     println!("{}", gen_disks());
 
-    if has_systemd() {
+    if has_program("systemctl") {
         println!("{PURPLE}{:>32}{RESET}", "Applications:");
         println!("{}", check_processes());
     }
